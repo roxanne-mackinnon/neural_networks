@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include "idx_reader.h"
 #include "neural_net.h"
-#define START 0
-#define END 5
+#define TRAIN_START 0
+#define TRAIN_END 500
 
 
 struct matrix output(char num) {
@@ -29,7 +29,7 @@ int main(int argc, char ** argv) {
   struct matrix * output_vectors = (struct matrix *) malloc(60000*sizeof(struct matrix));
   
   /* we turn out pointer pointer pointers into actual matrix structs, defined under multiplication, etc. */
-  for (int i=0;i<60000; i++) {
+  for (int i=TRAIN_START;i<TRAIN_END; i++) {
     *(matrices+i) = makematrix(784,1);
     (*(matrices+i)).vrep = get_vector(arr,i);
     *(output_vectors+i) = output(*(labs+i));
@@ -38,30 +38,46 @@ int main(int argc, char ** argv) {
   /* map_to_output turns a label into a 10 x 1 vector  representing the 'ideal output' for a given matrix input */
 
   /* the 'dimensions' of the neural net, i.e. how long each layer of nodes will be. we can derive the size of the weight matrices from there. */
-  int * dims = malloc(4*sizeof(int));
+  int * dims = malloc(3*sizeof(int));
   *dims = 784;
   *(dims+1) = 16;
-  *(dims+2) = 16;
-  *(dims+3) = 10;
+  *(dims+2) = 10;
   
-  struct net n = makenet(dims,4); /* 4 layers */
+  struct net n = makenet(dims,3); /* 3 layers */
 
   /* calculate initial accuracy, without any training. */
   /* accomplish this by retreiving the net's 'best guess' for each input and comparing it to the actual value */
   /* best_guess simply returns the index of the largest element in a vector */
-  printf("first one:\n");
-  printm(calculate(n,*matrices));
-  printf("second one:\n");
-  printm(calculate(n,*(matrices+1)));
-  /* now, let's go through and update the weight matrix for each thing */
-  for (int i=START; i<END; i++) {
-    update_weights(&n,*(matrices),*(output_vectors));
-    update_weights(&n,*(matrices+1),*(output_vectors+1));
-    printf("calculating %d...\n",i);
+
+  float accuracy = 0;
+  float total = 0;
+  int counter;
+  for (counter = TRAIN_START; counter < TRAIN_END; counter++) {
+    if (max_index(calculate(n,*(matrices+counter))) == *(labs+counter)) {
+      accuracy++;
+    }
+    total++;
   }
-  printf("first one:\n");
-  printm(calculate(n,*matrices));
-  printf("second one:\n");
-  printm(calculate(n,*(matrices+1)));
+
+  printf("initial accuracy: %f\n",(float)accuracy/(float)total);
+  /* now, let's go through and update the weight matrix for each thing */
+  for (int i=0; i<5; i++) {
+    for (int j=TRAIN_START; j<TRAIN_END; j++) {
+      printf("%d\n",j*i + j);
+      update_weights(&n,*(matrices+j),*(output_vectors+j));
+    }
+  }
+
+  accuracy = 0;
+  total = 0;
+  for (counter = TRAIN_START; counter < TRAIN_END; counter++) {
+    if (max_index(calculate(n,*(matrices+counter))) == *(labs+counter)) {
+      accuracy++;
+    }
+    total++;
+  }
+
+  printf("posterior accuracy: %f\n",(float)accuracy/(float)total);
+  
   return 0;
 }

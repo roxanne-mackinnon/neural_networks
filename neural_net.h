@@ -13,7 +13,7 @@ struct net {
 };
 
 float learning_rate(float n) {
-  return 0.5*n;
+  return 0.1*n;
 }
 
 float rand_p(FILE *rf) {
@@ -69,7 +69,7 @@ struct matrix calculate(struct net n, struct matrix input) {
   return input;
 }
 
-int max(struct matrix mat) {
+int max_index(struct matrix mat) {
   int ind = 0;
   for (int i=0;i<mat.height; i++) {
     if (retreive(mat,i,0) > retreive(mat,ind,0)) {
