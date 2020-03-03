@@ -3,7 +3,7 @@
 #include "idx_reader.h"
 #include "neural_net.h"
 #define TRAIN_START 0
-#define TRAIN_END 500
+#define TRAIN_END 20
 
 
 struct matrix output(char num) {
@@ -18,8 +18,8 @@ struct matrix output(char num) {
 int main(int argc, char ** argv) {
 
   /* these are the two files that are needed for the net. the first are matrices of images of drawn digits, the second is the labels for those images. */
-  FILE *mat_file = fopen("/Users/roxannemackinnon/Documents/c_projects/neural_networks/digit_matrices.idx","r");
-  FILE *lab_file = fopen("/Users/roxannemackinnon/Documents/c_projects/neural_networks/digit_labels.idx","r");
+  FILE *mat_file = fopen("/Users/roxannemackinnon/Documents/c_projects/machine_learning/neural_networks/digit_matrices.idx","r");
+  FILE *lab_file = fopen("/Users/roxannemackinnon/Documents/c_projects/machine_learning/neural_networks/digit_labels.idx","r");
 
   /* arr is meant to store all the matrices. each element will point to an array of pointers pointing to matrix rows. labs stores the labels */
   float *** arr = parse_images(mat_file);
@@ -52,6 +52,7 @@ int main(int argc, char ** argv) {
   float accuracy = 0;
   float total = 0;
   int counter;
+  
   for (counter = TRAIN_START; counter < TRAIN_END; counter++) {
     if (max_index(calculate(n,*(matrices+counter))) == *(labs+counter)) {
       accuracy++;
@@ -60,14 +61,16 @@ int main(int argc, char ** argv) {
   }
 
   printf("initial accuracy: %f\n",(float)accuracy/(float)total);
+  
   /* now, let's go through and update the weight matrix for each thing */
-  for (int i=0; i<5; i++) {
+  for (int i=0; i<10; i++) {
     for (int j=TRAIN_START; j<TRAIN_END; j++) {
-      printf("%d\n",j*i + j);
       update_weights(&n,*(matrices+j),*(output_vectors+j));
     }
+    printf("learning cycle %d\n",i);
   }
-
+  printf("finished learning\n");
+  
   accuracy = 0;
   total = 0;
   for (counter = TRAIN_START; counter < TRAIN_END; counter++) {
@@ -76,7 +79,7 @@ int main(int argc, char ** argv) {
     }
     total++;
   }
-
+  
   printf("posterior accuracy: %f\n",(float)accuracy/(float)total);
   
   return 0;

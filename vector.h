@@ -97,3 +97,4 @@ struct matrix apply_func(struct matrix mat, float (*foo)(float)) {
   }
   return mat;
 }
+
