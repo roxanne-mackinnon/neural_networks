@@ -49,7 +49,7 @@ void allocate_ptr(void * (*ptr), int * dims, int dimcount) {
 }
 */
 
-int stoi(char *s) {
+static int stoi(char *s) {
   int result =0;
   for (int i=0; *(s+i) != '\0';i++) {
     result = 10*result + (*(s+i)-'0');
@@ -57,12 +57,12 @@ int stoi(char *s) {
   return result;
 }
 
-int bytes_to_int(float b1, float b2, float b3, float b4) {
+static int bytes_to_int(float b1, float b2, float b3, float b4) {
   int coeff = 16*16;
   return b4 + b3*coeff + b2*coeff*coeff + b1*coeff*coeff*coeff;
 }
 
-float get_char(FILE *fp) {
+static float get_char(FILE *fp) {
   return (float) getc(fp);
 }
 
@@ -98,11 +98,11 @@ float *** parse_images(FILE *fp) {
   float *** mats = (float ***) malloc(*dims * sizeof(float **));
   /*  allocate_ptr(mats,dims,dimcount); */
   for (int i = 0; i< *dims; i++) {
-    *(mats+i) = (float **) malloc(*(dims+1) * sizeof(float *));
+    *(mats + i) = (float **) malloc(*(dims + 1) * sizeof(float *));
     for (int j=0; j< *(dims+1); j++) {
-      *(*(mats+i)+j) = (float *) malloc(*(dims+2) * sizeof(float));
-      for (int k=0; k< *(dims+2); k++) {
-	*(*(*(mats+i)+j)+k) = getc(fp);
+      *(*(mats+i)+j) = (float *) malloc(*(dims + 2) * sizeof(float));
+      for (int k = 0; k < *(dims+2); k++) {
+	*(*(*(mats+i)+j)+k) = (float)getc(fp) / (float) 255;
       }
     }
   }
@@ -133,6 +133,8 @@ float * get_vector(float *** arr, int n) {
   }
   return result;
 }
+
+
 
 float ** get_matrix(float *** arr, int n) {
   if (0>n || n>=60000) {

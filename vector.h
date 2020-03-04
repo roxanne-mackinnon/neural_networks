@@ -3,96 +3,96 @@
 #define ELEM_TYPE float
 
 
-struct matrix {
+typedef struct matrix_t {
   int height;
   int width;
-  ELEM_TYPE * vrep;
-};
+  ELEM_TYPE * values;
+} matrix_t;
 
-struct matrix makematrix(int h, int w) {
-  struct matrix result;
-  result.height=h;
-  result.width=w;
-  result.vrep = (ELEM_TYPE *) malloc(h*w*sizeof(ELEM_TYPE));
+matrix_t matrix(int height, int width) {
+  matrix_t result;
+  result.height = height;
+  result.width = width;
+  result.values = (ELEM_TYPE *) malloc(height * width * sizeof(ELEM_TYPE));
   return result;
 }
 
-void assign(struct matrix * mat, int i, int j, ELEM_TYPE elem) {
-  if (i*(mat->width) + j >= (mat->width)*(mat->height)) {
+void set(matrix_t * mat, int i, int j, ELEM_TYPE elem) {
+  if (i * (mat->width) + j >= (mat->width) * (mat->height)) {
   }
-  *(mat->vrep + i*(mat->width) + j) = elem; /* what should be a dereferenced pointer to the correct location in memory */
+  *(mat->values + i * (mat->width) + j) = elem; /* what should be a dereferenced pointer to the correct location in memory */
 }
 
-ELEM_TYPE retreive(struct matrix mat, int i, int j) {
-  if (i*mat.width + j >= mat.width*mat.height) {
+ELEM_TYPE get(matrix_t mat, int i, int j) {
+  if (i * mat.width + j >= mat.width * mat.height) {
 
   }
-  return *(mat.vrep + i*(mat.width) + j);
+  return *(mat.values + i * (mat.width) + j);
 }
 
-void printm(struct matrix mat) {
-  for (int i=0; i<(mat.height); i++) {
+void printm(matrix_t mat) {
+  for (int i = 0; i < mat.height; i++) {
     putchar('<');
     putchar(' ');
-    for (int j=0;j<(mat.width); j++) {
-      printf("%.8f ",retreive(mat,i,j));
+    for (int j = 0; j < mat.width; j++) {
+      printf("%.8f ", get(mat, i, j));
     }
     putchar('>');
     putchar('\n');
   }
 }
 
-struct matrix madd(struct matrix m1, struct matrix m2) {
+matrix_t madd(matrix_t m1, matrix_t m2) {
   if (m1.height != m2.height || m1.width != m2.width) {
     printf("ERROR: INCONSISTENT MATRIX SIZES FOR ADDITION\n");
-    return makematrix(0,0);
+    return matrix(0, 0);
   }
-  struct matrix result = makematrix(m1.height,m1.width);
-  int i,j;
-  for (i=0; i<m1.height; i++) {
-    for (j=0; j<m1.width; j++) {
-      assign(&result,i,j,retreive(m1,i,j)+retreive(m2,i,j));
+  matrix_t result = matrix(m1.height, m1.width);
+  int i, j;
+  for (i = 0; i < m1.height; i++) {
+    for (j = 0; j < m1.width; j++) {
+      set(&result, i, j, get(m1, i, j) + get(m2, i, j));
     }
   }
   return result;
 }
 
-struct matrix msub(struct matrix m1, struct matrix m2) {
+matrix_t msub(matrix_t m1, matrix_t m2) {
   if (m1.height != m2.height || m1.width != m2.width) {
-    printf("ERROR: INCONSISTENT MATRIX SIZES (%d,%d) x (%d,%d) FOR SUBTRACTION\n",m1.height,m1.width,m2.height,m2.width);
-    return makematrix(0,0);
+    printf("ERROR: INCONSISTENT MATRIX SIZES (%d,%d) x (%d,%d) FOR SUBTRACTION\n", m1.height, m1.width, m2.height, m2.width);
+    return matrix(0, 0);
   }
-  struct matrix result = makematrix(m1.height,m2.width);
-  int i,j;
-  for (i=0;i<m1.height;i++) {
-    for (j=0;j<m1.width;j++) {
-      assign(&result,i,j,retreive(m1,i,j)-retreive(m2,i,j));
+  matrix_t result = matrix(m1.height, m2.width);
+  int i, j;
+  for (i =0; i < m1.height; i++) {
+    for (j = 0; j < m1.width; j++) {
+      set(&result, i, j, get(m1, i, j) - get(m2, i, j));
     }
   }
   return result;
 }
 
-struct matrix mmult(struct matrix m1, struct matrix m2) {
-  struct matrix result = makematrix(m1.height,m2.width);
-  int i,j,k;
+matrix_t mmult(matrix_t m1, matrix_t m2) {
+  matrix_t result = matrix(m1.height, m2.width);
+  int i, j, k;
   ELEM_TYPE sum;
-  for (i=0; i<result.height; i++) {
-    for (j=0;j<result.width; j++) {
+  for (i = 0; i < result.height; i++) {
+    for (j = 0; j < result.width; j++) {
       sum = 0;
-      for (k=0;k<m1.width;k++) {
-	sum = sum + retreive(m1,i,k) * retreive(m2,k,j);
+      for (k = 0; k < m1.width; k++) {
+	sum = sum + get(m1, i, k) * get(m2, k, j);
       }
-      assign(&result,i,j,sum);
+      set(&result, i, j, sum);
     }
   }
   return result;
 }
 
-struct matrix apply_func(struct matrix mat, float (*foo)(float)) {
-  int i,j;
-  for (i=0; i<mat.height; i++) {
-    for (j=0; j<mat.width;  j++) {
-      assign(&mat,i,j,(*foo)(retreive(mat,i,j)));
+matrix_t apply_func(matrix_t mat, float (*foo)(float)) {
+  int i, j;
+  for (i = 0; i < mat.height; i++) {
+    for (j = 0; j < mat.width;  j++) {
+      set(&mat, i, j, (*foo)(get(mat, i, j)));
     }
   }
   return mat;

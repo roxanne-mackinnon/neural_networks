@@ -3,38 +3,89 @@
 #include "idx_reader.h"
 #include "neural_net.h"
 #define TRAIN_START 0
-#define TRAIN_END 500
+#define TRAIN_END 50
+#define TEST_START 100
+#define TEST_END 200
+
+FILE *mat_file;
+FILE *lab_file;
+
+matrix_t * matrices;
+matrix_t * output_vectors;
+
+float *** images;
+int * labels;
 
 
-struct matrix output(char num) {
-  struct matrix result = makematrix(10,1);
+matrix_t output(char num) {
+  matrix_t result = matrix(10,1);
   for (int i=0; i<10; i++) {
-    assign(&result,i,0,0);
+    set(&result,i,0,0);
   }
-  assign(&result,num,0,1);
+  set(&result,num,0,1);
   return result;
 }
 
+/* Updates the weights n times, giving information on cost and the like
+ *
+ */
+void train_verbose(neural_net_t * net, int repeats) {
+  for (int epoch = 0; epoch < repeats; epoch++) {
+    printf("Training epoch %d...\n",epoch);
+    for (int image = TRAIN_START; image < TRAIN_END; image++) {
+      update_weights(net, *(matrices + image), *(output_vectors + image));
+    }
+  }
+}
+
+float accuracy(neural_net_t * net) {
+  int correct = 0;
+  float result;
+  for (int image = TEST_START; image <= TEST_END; image++) {
+    if (max_index(calculate(*net, *(matrices + image))) == *(labels + image)) {
+      correct++;
+    }
+  }
+  result = (float) correct / (float) (TEST_END - TEST_START + 1);
+  return result;
+}
+
+
+
+
+
+
+
 int main(int argc, char ** argv) {
 
-  /* these are the two files that are needed for the net. the first are matrices of images of drawn digits, the second is the labels for those images. */
-  FILE *mat_file = fopen("/Users/roxannemackinnon/Documents/c_projects/neural_networks/digit_matrices.idx","r");
-  FILE *lab_file = fopen("/Users/roxannemackinnon/Documents/c_projects/neural_networks/digit_labels.idx","r");
-
-  /* arr is meant to store all the matrices. each element will point to an array of pointers pointing to matrix rows. labs stores the labels */
-  float *** arr = parse_images(mat_file);
-  int * labs = parse_labels(lab_file);
-
-  struct matrix * matrices = (struct matrix *) malloc(60000*sizeof(struct matrix));
-  struct matrix * output_vectors = (struct matrix *) malloc(60000*sizeof(struct matrix));
+  /* mat_file is an idx file that stores all 60000 784x784 pixel images in bytes */
+  /* lab_file is an idx file that stores all 60000 labels (0-9) for the images, in bytes */
+  mat_file = fopen("/Users/roxannemackinnon/Documents/c_projects/machine_learning/neural_networks/digit_matrices.idx","r");
+  lab_file = fopen("/Users/roxannemackinnon/Documents/c_projects/machine_learning/neural_networks/digit_labels.idx","r");
   
+  matrices = (matrix_t *) malloc(60000*sizeof(matrix_t));
+  output_vectors = (matrix_t *) malloc(60000*sizeof(matrix_t));
+
+
+  /* images is a 3D float pointer */
+  /* labels is a 1D int pointer */
+  images = parse_images(mat_file);
+  labels = parse_labels(lab_file);
+
   /* we turn out pointer pointer pointers into actual matrix structs, defined under multiplication, etc. */
-  for (int i=TRAIN_START;i<TRAIN_END; i++) {
-    *(matrices+i) = makematrix(784,1);
-    (*(matrices+i)).vrep = get_vector(arr,i);
-    *(output_vectors+i) = output(*(labs+i));
+  for (int i = TRAIN_START; i <= TRAIN_END; i++) {
+    *(matrices+i) = matrix(784,1);
+    (matrices+i)->values = get_vector(images,i);
+    *(output_vectors+i) = output(*(labels+i));
   }
-  
+
+  for (int i = TEST_START; i <= TEST_END; i++) {
+    *(matrices+i) = matrix(784,1);
+    (matrices+i)->values = get_vector(images,i);
+    *(output_vectors+i) = output(*(labels+i));
+  }
+
+
   /* map_to_output turns a label into a 10 x 1 vector  representing the 'ideal output' for a given matrix input */
 
   /* the 'dimensions' of the neural net, i.e. how long each layer of nodes will be. we can derive the size of the weight matrices from there. */
@@ -43,41 +94,17 @@ int main(int argc, char ** argv) {
   *(dims+1) = 16;
   *(dims+2) = 10;
   
-  struct net n = makenet(dims,3); /* 3 layers */
+  neural_net_t net = neural_net(dims,3); /* 3 layers */
 
   /* calculate initial accuracy, without any training. */
   /* accomplish this by retreiving the net's 'best guess' for each input and comparing it to the actual value */
   /* best_guess simply returns the index of the largest element in a vector */
 
-  float accuracy = 0;
-  float total = 0;
-  int counter;
-  for (counter = TRAIN_START; counter < TRAIN_END; counter++) {
-    if (max_index(calculate(n,*(matrices+counter))) == *(labs+counter)) {
-      accuracy++;
-    }
-    total++;
-  }
 
-  printf("initial accuracy: %f\n",(float)accuracy/(float)total);
-  /* now, let's go through and update the weight matrix for each thing */
-  for (int i=0; i<5; i++) {
-    for (int j=TRAIN_START; j<TRAIN_END; j++) {
-      printf("%d\n",j*i + j);
-      update_weights(&n,*(matrices+j),*(output_vectors+j));
-    }
-  }
-
-  accuracy = 0;
-  total = 0;
-  for (counter = TRAIN_START; counter < TRAIN_END; counter++) {
-    if (max_index(calculate(n,*(matrices+counter))) == *(labs+counter)) {
-      accuracy++;
-    }
-    total++;
-  }
-
-  printf("posterior accuracy: %f\n",(float)accuracy/(float)total);
+  printf("initial accuracy: %f\n",accuracy(&net));
+  train_verbose(&net, 10);
+  printf("posterior accuracy: %f\n",accuracy(&net));
   
+
   return 0;
 }
