@@ -10,7 +10,7 @@
 magic number
 size in dimension 0
 size in dimension 1
-size in dimension 2
+nsize in dimension 2
 .....
 nnsize in dimension N
 data
@@ -49,7 +49,7 @@ void allocate_ptr(void * (*ptr), int * dims, int dimcount) {
 }
 */
 
-static int stoi(char *s) {
+int stoi(char *s) {
   int result =0;
   for (int i=0; *(s+i) != '\0';i++) {
     result = 10*result + (*(s+i)-'0');
@@ -114,7 +114,7 @@ int * parse_labels(FILE *fp) {
   int count = getint(fp);
 
   int * labels = (int *) malloc(count*sizeof(int));
-  for (int i=0; i<count; i++) {
+  for (int i=0; i<60000; i++) {
     *(labels+i) = getc(fp);
   }
   return labels;
@@ -151,13 +151,13 @@ void print_matrix(float *** arr, int n) {
   }
   for (int i=0; i<28; i++) {
     for (int j=0; j<28; j++) {
-      if (*(*(*(arr+n)+i)+j) < 50) {
+      if (*(*(*(arr+n)+i)+j) < 0.25) {
 	putchar(' ');
       }
-      else if (50 <= *(*(*(arr+n)+i)+j) && *(*(*(arr+n)+i)+j) <100) {
+      else if (0.25 <= *(*(*(arr+n)+i)+j) && *(*(*(arr+n)+i)+j) <0.5) {
 	putchar('.');
       }
-      else if (100 <= *(*(*(arr+n)+i)+j) && *(*(*(arr+n)+i)+j) < 200) {
+      else if (0.5 <= *(*(*(arr+n)+i)+j) && *(*(*(arr+n)+i)+j) < 0.75) {
 	putchar('~');
       }
       else {
