@@ -1,9 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "vector.h"
-
-
+#include "idx_reader.h"
 
 
 
@@ -33,28 +31,22 @@ float random_zero_one(FILE *file) {
 /* Activation function for nodes.
  */
 float sigmoid(float t) {
-  return (float) 1 / (1 + expf(-1 * t));
+  return (float) 1 / (1 + expf(-1*t));
 }
 
 
 matrix_t * net_weight(neural_net_t * net, int layer) {
-  if (layer < 0 || layer >= net->layer_count - 1) {
-    fprintf(stderr,"ERROR: index %d out of bounds for weight matrix.\n",layer);
-  }
+  assert(0 <= layer && layer < net->layer_count);
   return net->weights + layer;
 }
 
 matrix_t * net_node_layer(neural_net_t * net, int layer) {
-  if (layer < 0 || layer >= net->layer_count) {
-    fprintf(stderr,"ERROR: index %d out of bounds for node layer.\n",layer);
-  }
+  assert(0 <= layer && layer <= net->layer_count);
   return net->values + layer;
 }
 
 matrix_t * net_bias_layer(neural_net_t * net, int layer) {
-  if (layer < 0 || layer >= net->layer_count - 1) {
-    fprintf(stderr,"ERROR: index %d out of bounds for bias layer.\n",layer);
-  }
+  assert(0 < layer && layer < net->layer_count);
   return net->biases + layer;
 }
 
@@ -88,7 +80,7 @@ neural_net_t neural_net(int * layer_sizes, int layer_count, float rate) {
   result.biases = (matrix_t *) malloc((layer_count - 1) * sizeof(matrix_t));
   result.weight_gradient = (matrix_t *) malloc((layer_count - 1) * sizeof(matrix_t));
   result.bias_gradient = (matrix_t *) malloc((layer_count - 1) * sizeof(matrix_t));
-  *(result.error) = matrix(*(layer_sizes + layer_count - 1),1);
+  result.error = (matrix_t *) malloc(1 * sizeof(matrix_t));
   for (int i = 0; i < layer_count - 1; i++) {
     *(result.values + i) = matrix(*(layer_sizes + i),1);
     *(result.weights + i) = matrix(*(layer_sizes + i + 1),*(layer_sizes + i));
@@ -100,30 +92,6 @@ neural_net_t neural_net(int * layer_sizes, int layer_count, float rate) {
   initialize_randomly(&result);
   return result;
 }
-
-
-matrix_t * calculate(neural_net_t * net, matrix_t * input) {
-  
-  if (input->height != net->weights->width) {
-    printf("ERROR: invalid input vector (%d,%d).\n",input->height,input->width);
-  }
-
-  matrix_t * feed_forward = input;
-  
-  for (int layer = 0; layer < (net->layer_count - 1) ; layer++) {
-    printf("%d,%d\n",feed_forward->height,feed_forward->width);
-    feed_forward = mmult(net->weights + layer, feed_forward);
-    printf("%d,%d\n",feed_forward->height,feed_forward->width);
-    feed_forward = msub(feed_forward,net->biases + layer);
-    printf("%d,%d\n",feed_forward->height,feed_forward->width);
-    feed_forward = apply_func(feed_forward, sigmoid);
-    printf("%d,%d\n",feed_forward->height,feed_forward->width);
-  }
-  printf("%d,%d\n",feed_forward->height,feed_forward->width);
-  
-  return feed_forward;
-}
-
 
 int max_index(matrix_t * mat) {
   int index = 0;
@@ -137,20 +105,25 @@ int max_index(matrix_t * mat) {
 
 
 void node_values(neural_net_t * net, matrix_t * input) {
-  if (input->height != (net->weights)->width) {
-    printf("ERROR: invalid input vector.\n");
-  }
+  assert((input->width == 1) && (input->height == *(net->layer_sizes + 0)));
   net->values = input;
   for (int layer = 0; layer < net->layer_count - 1; layer++) {
     *(net->values + layer + 1) = *(apply_func(msub(mmult(net->weights + layer, net->values + layer), net->biases + layer), sigmoid));
   }
 }
 
+matrix_t * calculate(neural_net_t * net, matrix_t * input) {
+  assert((input->width == 1) && (input->height == *(net->layer_sizes + 0)));
+  matrix_t * result = input;
+  for (int i = 0; i < net->layer_count - 1; i++) {
+    result = apply_func(msub(mmult(net->weights + i, result),net->biases + i),sigmoid);
+  }
+  return result;
+}
+
+
 
 float node_diff_weight(neural_net_t * net, int weight_layer, int weight_row, int weight_column, int node_layer, int node_row) {
-  if (weight_layer < 0 || weight_row < 0 || weight_column < 0 || node_layer < 0 || node_row < 0) {
-    printf("ERROR: NEGATIVE INDEX VALUES.\n");
-  }
   float coefficient = get(net->values + node_layer, node_row, 0) * (1 - get(net->values + node_layer, node_row, 0));
   /* if we've reached the final relevant layer */
   if (node_layer == weight_layer + 1) {
@@ -175,9 +148,6 @@ float node_diff_weight(neural_net_t * net, int weight_layer, int weight_row, int
 
 
 float node_diff_bias(neural_net_t * net, int bias_layer, int bias_row, int node_layer, int node_row) {
-  if (bias_layer < 0 || bias_row < 0 || node_layer < 0 || node_row < 0) {
-    printf("ERROR: NEGATIVE INDEX VALUES.\n");
-  }
   float coefficient = get(net->values + node_layer, node_row, 0) * (1 - get(net->values + node_layer, node_row, 0));
   if (node_layer == bias_layer + 1) {
     if (node_row == bias_row) {

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "vector.h"
 
 /* lets see how it interprets input as hex */
 /* what have we learned? you can it will correctly identify each hex */
@@ -33,22 +34,6 @@ The data is stored like in a C array, i.e. the index in the last dimension chang
 
 */
 
-/*
-void allocate_ptr(void * (*ptr), int * dims, int dimcount) {
-  if (dimcount == 2) {
-    ptr = (char **) malloc(*dims * sizeof(char*));
-    for (int i=0; i<*dims; i++) {
-      *(ptr+i) = malloc(*(dims+1) * sizeof(char));
-    }
-    return;
-  }
-  ptr = (void **) malloc(*dims * sizeof(void *));
-  for (int i=0; i < *dims; i++) {
-    allocate_ptr(*(ptr+i),dims+1,dimcount-1);
-  }
-}
-*/
-
 int stoi(char *s) {
   int result =0;
   for (int i=0; *(s+i) != '\0';i++) {
@@ -76,88 +61,57 @@ static unsigned int getint(FILE *fp) {
 }
 
 
-float *** parse_images(FILE *fp) {
+void parse_images(FILE *fp, matrix_t * images) {
 
-  if (getc(fp) != '\x00' || getc(fp) != '\x00') {
-    printf("ERROR: invalid startbits for idx file.\n");
-  }
+  assert(getc(fp) == '\x00');
+  assert(getc(fp) == '\x00');
 
   int data_type = getc(fp);
   int dimcount = getc(fp);
   int * dims = malloc(dimcount * sizeof(int));
-  /*  for (int i=0; i<dimcount; i++) {
-    *(dims+i) = getint(fp);
-    } */
-  getint(fp);
-  getint(fp);
-  getint(fp);
-  *dims = 60000;
-  *(dims+1) = 28;
-  *(dims+2) = 28;
+ 
+  *(dims) = getint(fp);
+  printf("%d\n",*dims);
+  *(dims + 1) = getint(fp);
+  *(dims + 2) = getint(fp);
 
-  float *** mats = (float ***) malloc(*dims * sizeof(float **));
-  /*  allocate_ptr(mats,dims,dimcount); */
-  for (int i = 0; i< *dims; i++) {
-    *(mats + i) = (float **) malloc(*(dims + 1) * sizeof(float *));
-    for (int j=0; j< *(dims+1); j++) {
-      *(*(mats+i)+j) = (float *) malloc(*(dims + 2) * sizeof(float));
+  assert(*(dims) == 60000);
+  assert(*(dims+1) == 28);
+  assert(*(dims+2) == 28);
+
+  for (int i = 0; i < *dims; i++) {
+    for (int j = 0; j < *(dims+1); j++) {
       for (int k = 0; k < *(dims+2); k++) {
-	*(*(*(mats+i)+j)+k) = (float)getc(fp) / (float) 255;
+	set(images + i, j * *(dims + 1) + k, 0, get_char(fp));
       }
     }
   }
-  return mats;
 }
 
-int * parse_labels(FILE *fp) {
+void parse_labels(FILE *fp, int * l) {
   getint(fp);
-  int count = getint(fp);
-
-  int * labels = (int *) malloc(count*sizeof(int));
-  for (int i=0; i<60000; i++) {
-    *(labels+i) = getc(fp);
+  getint(fp);
+  for (int i = 0; i < 60000; i++) {
+    *(l+i) = getc(fp);
   }
-  return labels;
 }
 
 float * get_vector(float *** arr, int n) {
-  if (0>n || n>=60000) {
-    printf("ERROR: chosnen matrix number must be between 0 and 59999\n");
-    return 0;
-  }
-  float * result = (float *) malloc(28*28*sizeof(float));
-  for (int i=0; i<28; i++) {
-    for (int j=0; j<28; j++) {
-      *(result + 28*i + j) = *(*(*(arr+n)+i)+j);
-    }
-  }
-  return result;
+  assert(0 <= n && n < 60000);
+  return *(*(arr + n));
 }
 
-
-
-float ** get_matrix(float *** arr, int n) {
-  if (0>n || n>=60000) {
-    printf("ERROR: chosen matrix number must be between 0 and 59999\n");
-    return 0;
-  }
-  return *(arr+n);
-}
-
-void print_matrix(float *** arr, int n) {
-  if (0>n || n>=60000) {
-    printf("ERROR: invalid matrix number. must be between 0-59999\n");
-    return;
-  }
+void print_matrix(matrix_t * mats, int n) {
+  assert(0 <= n && n < 60000);
   for (int i=0; i<28; i++) {
     for (int j=0; j<28; j++) {
-      if (*(*(*(arr+n)+i)+j) < 0.25) {
+      if (get(mats + n, i*28 +j, 0) < 0.25) {
 	putchar(' ');
       }
-      else if (0.25 <= *(*(*(arr+n)+i)+j) && *(*(*(arr+n)+i)+j) <0.5) {
+      else if (0.25 <= get(mats + n, i*28 +j, 0) && get(mats + n, i*28 +j, 0) <0.5) {
 	putchar('.');
       }
-      else if (0.5 <= *(*(*(arr+n)+i)+j) && *(*(*(arr+n)+i)+j) < 0.75) {
+      else if (0.5 <= get(mats + n, i*28 +j, 0) && get(mats + n, i*28 +j, 0) < 0.75) {
 	putchar('~');
       }
       else {
