@@ -38,6 +38,7 @@ matrix_t test_ns(matrix_t * mat) {
   return result;
 }
 
+
 /* /\* Updates the weights n times, giving information on cost and the like */
 /*  * */
 /*  *\/ */
@@ -75,10 +76,12 @@ int main(int argc, char ** argv) {
   lab_file = fopen("/Users/roxannemackinnon/Documents/c_projects/machine_learning/neural_networks/digit_labels.idx","r");
   matrices = (matrix_t *) malloc(60000*sizeof(matrix_t));
   
+
   for (int i = 0; i < 60000; i++) {
     *(matrices + i) = matrix(784, 1);
   }
   parse_images(mat_file, matrices);
+
 
   labels = (int *) malloc(60000 * sizeof(int));
   parse_labels(lab_file,labels);

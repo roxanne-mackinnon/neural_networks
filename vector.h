@@ -102,3 +102,4 @@ matrix_t * apply_func(matrix_t * m1, float (*func)(float)) {
   }
   return result;
 }
+
