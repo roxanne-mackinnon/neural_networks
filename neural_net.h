@@ -64,6 +64,7 @@ neural_net_t * neural_net(int * layer_sizes, int layer_count, float rate) {
   result->biases = (matrix_t *) malloc((layer_count - 1) * sizeof(matrix_t));
   result->weight_gradient = (matrix_t *) malloc((layer_count - 1) * sizeof(matrix_t));
   result->bias_gradient = (matrix_t *) malloc((layer_count - 1) * sizeof(matrix_t));
+  result->error = matrix(*(layer_sizes + layer_count - 1), 1);
 
   /* initialize  weights, biases, and gradients so that they can be passed to get() and set() */
   *(result->values) = *(matrix(*(layer_sizes), 1));
@@ -103,101 +104,101 @@ matrix_t * calculate(neural_net_t * net, matrix_t * input) {
 
 
 
-/* float node_diff_weight(neural_net_t * net, int weight_layer, int weight_row, int weight_column, int node_layer, int node_row) { */
-/*   float coefficient = get(net->values + node_layer, node_row, 0) * (1 - get(net->values + node_layer, node_row, 0)); */
-/*   /\* if we've reached the final relevant layer *\/ */
-/*   if (node_layer == weight_layer + 1) { */
-/*     /\* if our node is connected to the weight in question *\/ */
-/*     if (node_row == weight_row) { */
-/*       return coefficient * get(net->values + weight_layer, weight_column, 0); */
-/*     } */
-/*     /\* otherwise, our node is not a function of the weight *\/ */
-/*     else { */
-/*       return 0; */
-/*     } */
-/*   } */
-/*   /\* for each node in the previous layer *\/ */
-/*   float summation = 0; */
-/*   int pre_node; */
-/*   for (pre_node = 0; pre_node < *(net->layer_sizes + node_layer - 1); pre_node++) { */
-/*     /\* add the differential of (weight between node and previous node)*(value of previous node), given that the weight isn't the one we care about *\/ */
-/*     summation = summation + get(net->weights + node_layer - 1, node_row, pre_node) * node_diff_weight(net, weight_layer, weight_row, weight_column, node_layer - 1, pre_node); */
-/*   } */
-/*   return coefficient * summation; */
-/* } */
+float node_diff_weight(neural_net_t * net, int weight_layer, int weight_row, int weight_column, int node_layer, int node_row) {
+  float coefficient = get(net->values + node_layer, node_row, 0) * (1 - get(net->values + node_layer, node_row, 0));
+  /* if we've reached the final relevant layer */
+  if (node_layer == weight_layer + 1) {
+    /* if our node is connected to the weight in question */
+    if (node_row == weight_row) {
+      return coefficient * get(net->values + weight_layer, weight_column, 0);
+    }
+    /* otherwise, our node is not a function of the weight */
+    else {
+      return 0;
+    }
+  }
+  /* for each node in the previous layer */
+  float summation = 0;
+  int pre_node;
+  for (pre_node = 0; pre_node < *(net->layer_sizes + node_layer - 1); pre_node++) {
+    /* add the differential of (weight between node and previous node)*(value of previous node), given that the weight isn't the one we care about */
+    summation = summation + get(net->weights + node_layer - 1, node_row, pre_node) * node_diff_weight(net, weight_layer, weight_row, weight_column, node_layer - 1, pre_node);
+  }
+  return coefficient * summation;
+}
 
 
-/* float node_diff_bias(neural_net_t * net, int bias_layer, int bias_row, int node_layer, int node_row) { */
-/*   float coefficient = get(net->values + node_layer, node_row, 0) * (1 - get(net->values + node_layer, node_row, 0)); */
-/*   if (node_layer == bias_layer + 1) { */
-/*     if (node_row == bias_row) { */
-/*       return -1 * coefficient; */
-/*     } else { */
-/*       return 0; */
-/*     } */
-/*   } */
+float node_diff_bias(neural_net_t * net, int bias_layer, int bias_row, int node_layer, int node_row) {
+  float coefficient = get(net->values + node_layer, node_row, 0) * (1 - get(net->values + node_layer, node_row, 0));
+  if (node_layer == bias_layer + 1) {
+    if (node_row == bias_row) {
+      return -1 * coefficient;
+    } else {
+      return 0;
+    }
+  }
 
-/*   float summation = 0; */
-/*   int pre_node; */
-/*   for (pre_node = 0; pre_node < *(net->layer_sizes + node_layer - 1); pre_node++) { */
-/*     summation = summation + get(net->weights + node_layer - 1, node_row, pre_node) * node_diff_bias(net, bias_layer, bias_row, node_layer - 1, pre_node); */
-/*   } */
-/*   return coefficient * summation; */
-/* } */
-
-
-/* float cost_diff_weight(neural_net_t * net, int weight_layer, int weight_row, int weight_column) { */
-/*   float sum = 0; */
-/*   int final_layer_length = *(net->layer_sizes + net->layer_count - 1); */
-/*   for (int p = 0; p < final_layer_length; p++) { */
-/*     sum += get(net->error, p, 0) * node_diff_weight(net, weight_layer, weight_row, weight_column, net->layer_count - 1, p); */
-/*   } */
-/*   return -1 * sum; */
-/* } */
+  float summation = 0;
+  int pre_node;
+  for (pre_node = 0; pre_node < *(net->layer_sizes + node_layer - 1); pre_node++) {
+    summation = summation + get(net->weights + node_layer - 1, node_row, pre_node) * node_diff_bias(net, bias_layer, bias_row, node_layer - 1, pre_node);
+  }
+  return coefficient * summation;
+}
 
 
-/* float cost_diff_bias(neural_net_t * net, int bias_layer, int bias_row) { */
-/*   float sum = 0; */
-/*   int final_layer_length = *(net->layer_sizes + net->layer_count - 1); */
-/*   for (int p = 0; p < final_layer_length; p++) { */
-/*     sum += get(net->error, p, 0) * node_diff_bias(net, bias_layer, bias_row, net->layer_count - 1, p); */
-/*   } */
-/*   return -1 * sum; */
-/* } */
+float cost_diff_weight(neural_net_t * net, int weight_layer, int weight_row, int weight_column) {
+  float sum = 0;
+  int final_layer_length = *(net->layer_sizes + net->layer_count - 1);
+  for (int p = 0; p < final_layer_length; p++) {
+    sum += get(net->error, p, 0) * node_diff_weight(net, weight_layer, weight_row, weight_column, net->layer_count - 1, p);
+  }
+  return -1 * sum;
+}
 
 
-/* void weight_gradient(neural_net_t * net) { */
-/*   int layer, row, col; */
-/*   for (layer = 0; layer < net->layer_count - 1; layer++) { */
-/*     for (row = 0; row < *(net->layer_sizes + layer + 1); row++) { */
-/*       for (col = 0; col < *(net->layer_sizes + layer); col++) { */
-/* 	set(net->weight_gradient + layer, row, col, net->learning_rate * cost_diff_weight(net, layer, row, col)); */
-/*       } */
-/*     } */
-/*   } */
-/* } */
+float cost_diff_bias(neural_net_t * net, int bias_layer, int bias_row) {
+  float sum = 0;
+  int final_layer_length = *(net->layer_sizes + net->layer_count - 1);
+  for (int p = 0; p < final_layer_length; p++) {
+    sum += get(net->error, p, 0) * node_diff_bias(net, bias_layer, bias_row, net->layer_count - 1, p);
+  }
+  return -1 * sum;
+}
 
 
-/* void bias_gradient(neural_net_t * net) { */
-/*   int layer, row; */
-/*   for (layer = 0; layer < net->layer_count - 1; layer++) { */
-/*     for (row = 0; row < *(net->layer_sizes + layer + 1); row++) { */
-/*       set(net->bias_gradient + layer, row, 0, net->learning_rate * cost_diff_bias(net, layer, row)); */
-/*     } */
-/*   } */
-/* } */
+void weight_gradient(neural_net_t * net) {
+  int layer, row, col;
+  for (layer = 0; layer < net->layer_count - 1; layer++) {
+    for (row = 0; row < *(net->layer_sizes + layer + 1); row++) {
+      for (col = 0; col < *(net->layer_sizes + layer); col++) {
+	set(net->weight_gradient + layer, row, col, net->learning_rate * cost_diff_weight(net, layer, row, col));
+      }
+    }
+  }
+}
 
 
-/* void update_weights(neural_net_t * net, matrix_t * input, matrix_t * desired_output) { */
-/*   node_values(net, input); */
-/*   net->error = msub(desired_output, net->values + net->layer_count - 1); */
-/*   weight_gradient(net); */
-/*   bias_gradient(net); */
-/*   for (int layer = 0; layer < net->layer_count - 1; layer++) { */
-/*     *(net->weights + layer) = *(msub(net->weights + layer, net->weight_gradient + layer)); */
-/*     *(net->biases + layer) = *(msub(net->biases + layer, net->bias_gradient + layer)); */
-/*   } */
-/* } */
+void bias_gradient(neural_net_t * net) {
+  int layer, row;
+  for (layer = 0; layer < net->layer_count - 1; layer++) {
+    for (row = 0; row < *(net->layer_sizes + layer + 1); row++) {
+      set(net->bias_gradient + layer, row, 0, net->learning_rate * cost_diff_bias(net, layer, row));
+    }
+  }
+}
+
+
+void update_weights(neural_net_t * net, matrix_t * input, matrix_t * desired_output) {
+  node_values(net, input);
+  *(net->error) = *(msub(desired_output, net->values + net->layer_count - 1));
+  weight_gradient(net);
+  bias_gradient(net);
+  for (int layer = 0; layer < net->layer_count - 1; layer++) {
+    *(net->weights + layer) = *(msub(net->weights + layer, net->weight_gradient + layer));
+    *(net->biases + layer) = *(msub(net->biases + layer, net->bias_gradient + layer));
+  }
+}
 
 
 /* int main() { */

@@ -13,28 +13,46 @@
 /* /\* Updates the weights n times, giving information on cost and the like */
 /*  * */
 /*  *\/ */
-/* void train_verbose(neural_net_t * net, int repeats) { */
-/*   for (int epoch = 0; epoch < repeats; epoch++) { */
-/*     printf("Training epoch %d...\n",epoch); */
-/*     for (int image = TRAIN_START; image < TRAIN_END; image++) { */
-/*       update_weights(net, *(matrices + image), *(output_vectors + image)); */
-/*     } */
-/*   } */
-/* } */
 
-/* float accuracy(neural_net_t * net) { */
-/*   int correct = 0; */
-/*   float result; */
-/*   for (int image = TEST_START; image <= TEST_END; image++) { */
-/*     if (max_index(calculate(*net, *(matrices + image))) == *(labels + image)) { */
-/*       correct++; */
-/*     } */
-/*   } */
-/*   result = (float) correct / (float) (TEST_END - TEST_START + 1); */
-/*   return result; */
-/* } */
+int max_index(matrix_t * mat) {
+  int index = 0;
+  for (int i = 0; i < mat->height; i++) {
+    if (get(mat, i, 0) > get(mat, index, 0)) {
+      index = i;
+    }
+  }
+  return index;
+}
 
+float accuracy(neural_net_t * net, matrix_t * tests, int * labs) {
+  int correct = 0;
+  float result;
+  for (int image = TEST_START; image <= TEST_END; image++) {
+    if (max_index(calculate(net, tests + image)) == *(labs + image)) {
+      correct++;
+    }
+  }
+  result = (float) correct / (float) (TEST_END - TEST_START + 1);
+  return result;
+}
 
+matrix_t * output_for(int num) {
+  matrix_t * result = matrix(10, 1);
+  for (int i = 0; i < 10; i++) {
+    set(result, i, 0, 0);
+  }
+  set(result, num, 0, 1);
+  return result;
+}
+
+void train_verbose(neural_net_t * net, matrix_t * train_mats, int * train_labs, matrix_t * test_mats, int * test_labs, int repeats) {
+  for (int epoch = 0; epoch < repeats; epoch++) {
+    printf("%d   %.3f\n", epoch, accuracy(net, test_mats, test_labs));
+    for (int image = TRAIN_START; image < TRAIN_END; image++) {
+      update_weights(net, train_mats + image, output_for(*(train_labs + image)));
+    }
+  }
+}
 
 
 int stoi(char * c) {
@@ -44,7 +62,6 @@ int stoi(char * c) {
   }
   return result;
 }
-
 
 int main(int argc, char ** argv) {
 
@@ -64,9 +81,9 @@ int main(int argc, char ** argv) {
     *(dims + i) = stoi(*(argv + i + 1));
   }
   
-  neural_net_t * net = neural_net(dims, argc - 1, 0.1);
+  neural_net_t * net = neural_net(dims, argc - 1, 0.5);
 
-  node_values(net, train_matrices + 0);
+  train_verbose(net, train_matrices, train_labels, test_matrices, test_labels, 100);
 
   /* /\* calculate initial accuracy, without any training. *\/ */
   /* /\* accomplish this by retreiving the net's 'best guess' for each input and comparing it to the actual value *\/ */
