@@ -6,8 +6,8 @@
 #define LABEL_SOURCE "/Users/roxannemackinnon/Documents/c_projects/machine_learning/neural_networks/digit_labels.idx"
 #define TRAIN_START 0
 #define TRAIN_END 50
-#define TEST_START 0
-#define TEST_END 50
+#define TEST_START 100
+#define TEST_END 200
 
 
 /* /\* Updates the weights n times, giving information on cost and the like */
@@ -27,7 +27,7 @@ int max_index(matrix_t * mat) {
 float accuracy(neural_net_t * net, matrix_t * tests, int * labs) {
   int correct = 0;
   float result;
-  for (int image = TEST_START; image <= TEST_END; image++) {
+  for (int image = 0; image < TEST_END - TEST_START; image++) {
     if (max_index(calculate(net, tests + image)) == *(labs + image)) {
       correct++;
     }
@@ -75,6 +75,7 @@ int main(int argc, char ** argv) {
   int * test_labels = parse_labels(LABEL_SOURCE, TEST_START, TEST_END);
 
   /* the 'dimensions' of the neural net, i.e. how long each layer of nodes will be. we can derive the size of the weight matrices from there. */
+
   
   int * dims = malloc((argc-1) * sizeof(int));
   for (int i = 0; i < argc - 1; i++) {
